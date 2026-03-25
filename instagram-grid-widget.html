@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Instagram Grid Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:#0c0c0c;
+  --s1:#161616;
+  --s2:#1e1e1e;
+  --s3:#262626;
+  --border:#2a2a2a;
+  --border2:#383838;
+  --text:#f5f1ee;
+  --muted:#888880;
+  --hint:#555550;
+  --accent:#d4a97a;
+  --accent2:#b8834a;
+  --gap:3px;
+  --r:10px;
+  --r2:14px;
+}
+
+body{
+  font-family:'DM Sans',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:24px 16px 80px;
+}
+
+.app{width:100%;max-width:440px}
+
+/* TOP BAR */
+.top-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.wordmark{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--accent);text-transform:uppercase}
+
+/* PROFILE */
+.profile-card{
+  background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);
+  padding:14px 16px;display:flex;align-items:center;gap:14px;
+  margin-bottom:14px;cursor:pointer;transition:border-color .2s;
+}
+.profile-card:hover{border-color:var(--border2)}
+.avatar{
+  width:46px;height:46px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent2),#8a5c2a);
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;flex-shrink:0;overflow:hidden;border:2px solid var(--border2);
+}
+.avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.profile-meta{flex:1;min-width:0}
+.profile-handle{font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.profile-name{font-size:11px;color:var(--muted);margin-top:2px}
+.edit-hint{font-size:10px;color:var(--hint);font-family:'DM Mono',monospace;flex-shrink:0}
+
+/* GRID */
+.grid-shell{
+  background:var(--s1);border:1px solid var(--border);
+  border-radius:var(--r2);overflow:hidden;margin-bottom:14px;
+}
+.grid-header{
+  padding:10px 14px;display:flex;align-items:center;
+  justify-content:space-between;border-bottom:1px solid var(--border);
+}
+.grid-label{font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+.grid-count{font-size:10px;font-family:'DM Mono',monospace;color:var(--hint)}
+.grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:var(--gap);background:var(--bg);padding:var(--gap);
+}
+
+/* CELL */
+.cell{aspect-ratio:1;position:relative;background:var(--s2);cursor:pointer;overflow:hidden}
+.cell img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;transition:transform .3s}
+.cell:hover img{transform:scale(1.04)}
+.cell-empty{
+  width:100%;height:100%;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:6px;
+  color:var(--hint);font-size:9px;letter-spacing:.08em;text-transform:uppercase;transition:all .2s;
+}
+.cell:hover .cell-empty{color:var(--accent2)}
+.cell-empty svg{width:22px;height:22px;opacity:.3;transition:opacity .2s}
+.cell:hover .cell-empty svg{opacity:.7}
+.cell-num{
+  position:absolute;top:4px;left:5px;font-size:8px;
+  font-family:'DM Mono',monospace;color:rgba(255,255,255,.4);
+  background:rgba(0,0,0,.5);padding:1px 4px;border-radius:3px;pointer-events:none;z-index:2;
+}
+.cell-overlay{
+  position:absolute;inset:0;background:rgba(0,0,0,.6);
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  opacity:0;transition:opacity .2s;z-index:3;
+}
+.cell:hover .cell-overlay{opacity:1}
+.cell-btn{
+  width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.15);
+  border:none;color:#fff;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:background .15s;backdrop-filter:blur(6px);
+}
+.cell-btn:hover{background:rgba(255,255,255,.28)}
+.cell-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.cell.dragging{opacity:.3}
+.cell.drag-over{outline:2px solid var(--accent);outline-offset:-2px}
+
+/* TOOLBAR */
+.toolbar{display:flex;gap:8px;margin-bottom:14px}
+.btn{
+  font-family:'DM Sans',sans-serif;cursor:pointer;border:none;
+  border-radius:9px;font-size:12px;font-weight:500;padding:10px 16px;
+  transition:all .18s;display:flex;align-items:center;gap:6px;
+}
+.btn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.btn-primary{background:var(--accent2);color:#1a0e04;flex:1}
+.btn-primary:hover{background:var(--accent)}
+.btn-ghost{background:var(--s2);color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{border-color:var(--border2);color:var(--text)}
+.btn-danger{background:var(--s2);color:#e05555;border:1px solid var(--border)}
+.btn-danger:hover{border-color:#e05555}
+
+/* PANEL */
+.panel{background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:14px;display:none}
+.panel.open{display:block}
+.panel-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.panel-title{font-size:12px;font-weight:500;color:var(--text)}
+.panel-close{background:none;border:none;color:var(--hint);cursor:pointer;font-size:20px;line-height:1;padding:0;transition:color .15s}
+.panel-close:hover{color:var(--text)}
+.panel-body{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.field-label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px;font-weight:500}
+.field-input{
+  width:100%;background:var(--s2);border:1px solid var(--border);
+  color:var(--text);padding:9px 11px;border-radius:8px;font-size:12px;
+  font-family:'DM Mono',monospace;outline:none;transition:border-color .2s;
+}
+.field-input:focus{border-color:var(--accent2)}
+.field-input::placeholder{color:var(--hint)}
+textarea.field-input{font-family:'DM Sans',sans-serif;resize:none;height:64px;line-height:1.5}
+select.field-input{cursor:pointer}
+option{background:var(--s2)}
+.preview-box{width:100%;height:90px;border-radius:8px;overflow:hidden;background:var(--s3);border:1px solid var(--border);display:none}
+.preview-box img{width:100%;height:100%;object-fit:cover;display:block}
+.panel-actions{display:flex;gap:8px}
+.panel-actions .btn{padding:9px 18px}
+.panel-actions .btn-primary{flex:1}
+
+/* CAPTION PANEL */
+.cap-panel{background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:14px;display:none}
+.cap-panel.open{display:block}
+.cap-list{padding:12px 16px;display:flex;flex-direction:column;gap:10px}
+.cap-row{display:flex;gap:10px;align-items:flex-start;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.cap-row:last-child{border-bottom:none;padding-bottom:0}
+.cap-thumb{width:38px;height:38px;border-radius:5px;background:var(--s2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-family:'DM Mono',monospace;color:var(--hint);overflow:hidden}
+.cap-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.cap-info{flex:1;min-width:0}
+.cap-slot{font-size:9px;font-family:'DM Mono',monospace;color:var(--accent2);margin-bottom:3px}
+.cap-text{font-size:11px;color:var(--muted);line-height:1.5;word-break:break-word}
+.cap-empty-txt{font-size:11px;color:var(--hint);font-style:italic}
+
+/* EMPTY HINT */
+.empty-hint{text-align:center;padding:12px 16px;font-size:11px;color:var(--hint);line-height:1.6;border-top:1px solid var(--border)}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.8);display:none;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(8px);padding:20px}
+.modal-bg.open{display:flex}
+.modal{background:var(--s1);border:1px solid var(--border2);border-radius:18px;padding:24px;width:100%;max-width:360px;animation:fadeUp .2s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.modal h2{font-size:15px;font-weight:600;margin-bottom:18px}
+.modal-field{margin-bottom:12px}
+.modal-actions{display:flex;gap:8px;margin-top:6px}
+.modal-actions .btn{flex:1;justify-content:center}
+
+.footer{text-align:center;font-size:9px;font-family:'DM Mono',monospace;color:var(--hint);margin-top:12px;opacity:.4}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="top-bar">
+    <span class="wordmark">Grid Planner</span>
+    <button class="btn btn-ghost" onclick="openProfileModal()" style="padding:7px 12px;font-size:11px">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      Perfil
+    </button>
+  </div>
+
+  <!-- Profile -->
+  <div class="profile-card" onclick="openProfileModal()">
+    <div class="avatar" id="avatarWrap"><span>🌿</span></div>
+    <div class="profile-meta">
+      <div class="profile-handle" id="displayHandle">@tuusuario</div>
+      <div class="profile-name" id="displayName">Tu nombre · toca para editar</div>
+    </div>
+    <span class="edit-hint">editar →</span>
+  </div>
+
+  <!-- Grid -->
+  <div class="grid-shell">
+    <div class="grid-header">
+      <span class="grid-label">Vista previa del feed</span>
+      <span class="grid-count" id="gridCount">0 / 9 slots</span>
+    </div>
+    <div class="grid" id="grid"></div>
+    <div class="empty-hint" id="emptyHint">
+      Añade imágenes para previsualizar cómo quedará tu feed ↓
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <button class="btn btn-primary" onclick="toggleAddPanel()">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Añadir imagen
+    </button>
+    <button class="btn btn-ghost" onclick="toggleCapPanel()">
+      <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Captions
+    </button>
+    <button class="btn btn-danger" onclick="clearAll()" title="Limpiar todo">
+      <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+    </button>
+  </div>
+
+  <!-- Add panel -->
+  <div class="panel" id="addPanel">
+    <div class="panel-header">
+      <span class="panel-title">Añadir imagen</span>
+      <button class="panel-close" onclick="toggleAddPanel()">×</button>
+    </div>
+    <div class="panel-body">
+      <div>
+        <label class="field-label">URL de la imagen</label>
+        <input class="field-input" type="text" id="urlInput" placeholder="https://i.imgur.com/ejemplo.jpg" oninput="handleUrl()">
+      </div>
+      <div class="preview-box" id="previewBox">
+        <img id="previewImg" alt="preview" onerror="document.getElementById('previewBox').style.display='none'">
+      </div>
+      <div>
+        <label class="field-label">Posición en el grid</label>
+        <select class="field-input" id="slotSelect"></select>
+      </div>
+      <div>
+        <label class="field-label">Caption (opcional)</label>
+        <textarea class="field-input" id="captionInput" placeholder="Escribe aquí tu caption..."></textarea>
+      </div>
+      <div class="panel-actions">
+        <button class="btn btn-ghost" onclick="toggleAddPanel()">Cancelar</button>
+        <button class="btn btn-primary" onclick="addImage()">
+          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          Añadir al grid
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Caption panel -->
+  <div class="cap-panel" id="capPanel">
+    <div class="panel-header">
+      <span class="panel-title">Captions del feed</span>
+      <button class="panel-close" onclick="toggleCapPanel()">×</button>
+    </div>
+    <div class="cap-list" id="capList"></div>
+  </div>
+
+  <div class="footer">arrastra para reordenar · toca una imagen para editar o eliminar</div>
+
+</div>
+
+<!-- Profile modal -->
+<div class="modal-bg" id="profileModal">
+  <div class="modal">
+    <h2>Editar perfil</h2>
+    <div class="modal-field">
+      <label class="field-label">@ Usuario de Instagram</label>
+      <input class="field-input" type="text" id="modalHandle" placeholder="tuusuario">
+    </div>
+    <div class="modal-field">
+      <label class="field-label">Nombre</label>
+      <input class="field-input" type="text" id="modalName" placeholder="Tu nombre">
+    </div>
+    <div class="modal-field">
+      <label class="field-label">URL foto de perfil (opcional)</label>
+      <input class="field-input" type="text" id="modalAvatar" placeholder="https://...">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveProfile()">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        Guardar
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+const TOTAL = 9;
+let cells = Array.from({length:TOTAL},(_,i)=>({slot:i,url:'',caption:''}));
+let profile = {handle:'@tuusuario',name:'Tu nombre',avatar:''};
+let dragSrc = null;
+let editingIdx = null;
+
+function save(){
+  try{
+    localStorage.setItem('igGrid_cells',JSON.stringify(cells));
+    localStorage.setItem('igGrid_profile',JSON.stringify(profile));
+  }catch(e){}
+}
+
+function load(){
+  try{
+    const c=localStorage.getItem('igGrid_cells');
+    const p=localStorage.getItem('igGrid_profile');
+    if(c) cells=JSON.parse(c);
+    if(p) profile=JSON.parse(p);
+  }catch(e){}
+}
+
+function renderGrid(){
+  const g=document.getElementById('grid');
+  const eh=document.getElementById('emptyHint');
+  const gc=document.getElementById('gridCount');
+  const filled=cells.filter(c=>c.url).length;
+  gc.textContent=filled+' / '+TOTAL+' slots';
+  eh.style.display=filled?'none':'block';
+  g.innerHTML='';
+
+  cells.forEach((cell,i)=>{
+    const div=document.createElement('div');
+    div.className='cell';
+    div.dataset.idx=i;
+    div.draggable=!!cell.url;
+
+    const num=document.createElement('div');
+    num.className='cell-num';
+    num.textContent=i+1;
+    div.appendChild(num);
+
+    if(cell.url){
+      const img=document.createElement('img');
+      img.src=cell.url;
+      img.alt='Post '+(i+1);
+      img.onerror=()=>{cells[i].url='';save();renderGrid()};
+      div.appendChild(img);
+
+      const ov=document.createElement('div');
+      ov.className='cell-overlay';
+
+      const editBtn=document.createElement('button');
+      editBtn.className='cell-btn';
+      editBtn.title='Editar';
+      editBtn.innerHTML='<svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+      editBtn.onclick=(e)=>{e.stopPropagation();openEdit(i)};
+
+      const delBtn=document.createElement('button');
+      delBtn.className='cell-btn';
+      delBtn.title='Eliminar';
+      delBtn.innerHTML='<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>';
+      delBtn.onclick=(e)=>{e.stopPropagation();deleteCell(i)};
+
+      ov.append(editBtn,delBtn);
+      div.appendChild(ov);
+
+      div.addEventListener('dragstart',e=>{
+        dragSrc=i;div.classList.add('dragging');
+        e.dataTransfer.effectAllowed='move';
+      });
+      div.addEventListener('dragend',()=>{
+        div.classList.remove('dragging');
+        document.querySelectorAll('.cell').forEach(c=>c.classList.remove('drag-over'));
+      });
+    } else {
+      const ph=document.createElement('div');
+      ph.className='cell-empty';
+      ph.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>Slot '+(i+1)+'</span>';
+      ph.onclick=()=>{renderSlotSelect(i);document.getElementById('addPanel').classList.add('open')};
+      div.appendChild(ph);
+    }
+
+    div.addEventListener('dragover',e=>{
+      e.preventDefault();
+      if(dragSrc!==null&&dragSrc!==i)div.classList.add('drag-over');
+    });
+    div.addEventListener('dragleave',()=>div.classList.remove('drag-over'));
+    div.addEventListener('drop',e=>{
+      e.preventDefault();div.classList.remove('drag-over');
+      if(dragSrc!==null&&dragSrc!==i){
+        const tmp={...cells[dragSrc]};
+        cells[dragSrc]={...cells[i]};
+        cells[i]=tmp;
+        dragSrc=null;save();renderGrid();renderCaps();
+      }
+    });
+
+    g.appendChild(div);
+  });
+}
+
+function renderSlotSelect(preferred){
+  const sel=document.getElementById('slotSelect');
+  sel.innerHTML='';
+  cells.forEach((c,i)=>{
+    const o=document.createElement('option');
+    o.value=i;
+    o.textContent='Slot '+(i+1)+(c.url?' (ocupado)':' (vacío)');
+    sel.appendChild(o);
+  });
+  if(preferred!==undefined) sel.value=preferred;
+  else{const f=cells.findIndex(c=>!c.url);sel.value=f>=0?f:0;}
+}
+
+function handleUrl(){
+  const url=document.getElementById('urlInput').value.trim();
+  const box=document.getElementById('previewBox');
+  const img=document.getElementById('previewImg');
+  if(url){
+    img.src=url;box.style.display='block';
+    img.onerror=()=>{box.style.display='none'};
+    img.onload=()=>{box.style.display='block'};
+  } else {box.style.display='none';}
+}
+
+function addImage(){
+  const url=document.getElementById('urlInput').value.trim();
+  if(!url){alert('Pega la URL de una imagen primero 🙏');return;}
+  const idx=parseInt(document.getElementById('slotSelect').value);
+  const caption=document.getElementById('captionInput').value.trim();
+  cells[idx]={slot:idx,url,caption};
+  save();renderGrid();renderSlotSelect();renderCaps();
+  document.getElementById('urlInput').value='';
+  document.getElementById('captionInput').value='';
+  document.getElementById('previewBox').style.display='none';
+  document.getElementById('addPanel').classList.remove('open');
+}
+
+function openEdit(i){
+  renderSlotSelect(i);
+  document.getElementById('urlInput').value=cells[i].url;
+  document.getElementById('captionInput').value=cells[i].caption||'';
+  handleUrl();
+  document.getElementById('addPanel').classList.add('open');
+}
+
+function deleteCell(i){
+  cells[i]={slot:i,url:'',caption:''};
+  save();renderGrid();renderSlotSelect();renderCaps();
+}
+
+function clearAll(){
+  if(!confirm('¿Limpiar todo el grid?'))return;
+  cells=Array.from({length:TOTAL},(_,i)=>({slot:i,url:'',caption:''}));
+  save();renderGrid();renderSlotSelect();renderCaps();
+}
+
+function toggleAddPanel(){
+  const p=document.getElementById('addPanel');
+  p.classList.toggle('open');
+  if(p.classList.contains('open'))renderSlotSelect();
+}
+
+function toggleCapPanel(){
+  document.getElementById('capPanel').classList.toggle('open');
+}
+
+function renderCaps(){
+  const list=document.getElementById('capList');
+  list.innerHTML='';
+  const filled=cells.filter(c=>c.url);
+  if(!filled.length){
+    list.innerHTML='<p style="font-size:11px;color:var(--hint);padding:4px 0">Aún no has añadido imágenes al grid.</p>';
+    return;
+  }
+  filled.forEach(c=>{
+    const row=document.createElement('div');
+    row.className='cap-row';
+    const thumb=document.createElement('div');
+    thumb.className='cap-thumb';
+    if(c.url){const img=document.createElement('img');img.src=c.url;img.alt='';thumb.appendChild(img);}
+    else thumb.textContent='—';
+    const info=document.createElement('div');
+    info.className='cap-info';
+    const sl=document.createElement('div');sl.className='cap-slot';sl.textContent='SLOT '+(c.slot+1);
+    const tx=document.createElement('div');
+    tx.className=c.caption?'cap-text':'cap-empty-txt';
+    tx.textContent=c.caption||'Sin caption';
+    info.append(sl,tx);row.append(thumb,info);list.appendChild(row);
+  });
+}
+
+function renderProfile(){
+  document.getElementById('displayHandle').textContent=profile.handle||'@tuusuario';
+  document.getElementById('displayName').textContent=(profile.name||'Tu nombre')+' · toca para editar';
+  const w=document.getElementById('avatarWrap');
+  if(profile.avatar){
+    w.innerHTML='<img src="'+profile.avatar+'" alt="avatar" onerror="this.parentElement.innerHTML=\'<span>🌿</span>\'">';
+  } else {w.innerHTML='<span>🌿</span>';}
+}
+
+function openProfileModal(){
+  document.getElementById('modalHandle').value=profile.handle.replace('@','');
+  document.getElementById('modalName').value=profile.name;
+  document.getElementById('modalAvatar').value=profile.avatar||'';
+  document.getElementById('profileModal').classList.add('open');
+}
+function closeModal(){document.getElementById('profileModal').classList.remove('open')}
+function saveProfile(){
+  const h=document.getElementById('modalHandle').value.trim();
+  profile.handle=h?('@'+h.replace('@','')):'@tuusuario';
+  profile.name=document.getElementById('modalName').value.trim()||'Tu nombre';
+  profile.avatar=document.getElementById('modalAvatar').value.trim();
+  save();renderProfile();closeModal();
+}
+document.getElementById('profileModal').addEventListener('click',function(e){if(e.target===this)closeModal()});
+
+// Init
+load();renderGrid();renderSlotSelect();renderCaps();renderProfile();
+</script>
+</body>
+</html>
